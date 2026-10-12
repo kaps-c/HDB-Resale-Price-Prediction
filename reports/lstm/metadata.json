@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "model": "lstm",
+  "seed": 42,
+  "data_sha256": "fb23b8460f1a762e4220382e91f3bfcf6030bb69286b1a5577646c33d7a608d1",
+  "features": [
+    "month_index",
+    "floor_area_sqm",
+    "lease_commence_date",
+    "lease_months",
+    "storey_lower",
+    "storey_upper",
+    "town",
+    "flat_type",
+    "street_name",
+    "flat_model"
+  ],
+  "split_dates": {
+    "train_end": "2023-12",
+    "validation_end": "2024-12",
+    "test_end": "2025-03"
+  },
+  "splits": {
+    "train": 169150,
+    "validation": 27835,
+    "test": 5414
+  },
+  "configuration": {
+    "architecture": "lstm",
+    "batch_size": 1024,
+    "device": "cpu",
+    "epochs": 5,
+    "learning_rate": 0.001,
+    "patience": 5,
+    "seed": 42,
+    "threads": 2
+  },
+  "python": "3.13.5",
+  "dependencies": {
+    "numpy": "2.5.4",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0",
+    "torch": "2.14.1+cpu"
+  },
+  "fit_seconds": 845.7174333999865,
+  "threads": 2,
+  "validation": {
+    "count": 27835,
+    "mae_sgd": 85408.7227500898,
+    "rmse_sgd": 112299.87802475068,
+    "r2": 0.6454052822986758
+  },
+  "training": {
+    "epochs_completed": 5,
+    "best_epoch": 4,
+    "device": "cpu"
+  }
+}

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -24,10 +25,16 @@ def main(argv: list[str] | None = None) -> int:
         "train", help="Train and validate without touching test labels"
     )
     train.add_argument("--data", type=Path, required=True)
-    train.add_argument("--model", choices=["median", "ridge", "trees"], required=True)
+    train.add_argument(
+        "--model",
+        choices=["median", "ridge", "trees", "mlp", "lstm"],
+        required=True,
+    )
     train.add_argument("--output", type=Path, required=True, help="New run directory")
     train.add_argument("--seed", type=int, default=42)
     train.add_argument("--threads", type=int, default=4)
+    train.add_argument("--epochs", type=int, default=20, help="Neural epoch ceiling")
+    train.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     evaluate = commands.add_parser("evaluate", help="Evaluate a frozen model")
     evaluate.add_argument("--data", type=Path, required=True)
     evaluate.add_argument("--bundle", type=Path, required=True)
@@ -44,10 +51,17 @@ def main(argv: list[str] | None = None) -> int:
     compare.add_argument("runs", nargs="+", type=Path)
     compare.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
         if args.command == "train":
             result = train_experiment(
-                args.data, args.model, args.output, seed=args.seed, threads=args.threads
+                args.data,
+                args.model,
+                args.output,
+                seed=args.seed,
+                threads=args.threads,
+                epochs=args.epochs,
+                device=args.device,
             )
         elif args.command == "evaluate":
             result = evaluate_experiment(args.bundle, args.data, split=args.split)

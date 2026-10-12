@@ -5,6 +5,24 @@ from conftest import transaction_frame
 from hdb_resale.experiment import load_bundle, predict, train_experiment
 
 
+def test_concurrent_runs_cannot_overwrite_each_other(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    source = tmp_path / "data.csv"
+    transaction_frame().to_csv(source, index=False)
+    output = tmp_path / "same-run"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        runs = [
+            pool.submit(train_experiment, source, "median", output) for _ in range(2)
+        ]
+    successes = [run for run in runs if run.exception() is None]
+    failures = [run.exception() for run in runs if run.exception() is not None]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert isinstance(failures[0], FileExistsError)
+    assert load_bundle(output)["metadata"]["model"] == "median"
+
+
 def test_baseline_roundtrip_is_target_free_and_order_independent(tmp_path):
     data = transaction_frame()
     csv = tmp_path / "input.csv"

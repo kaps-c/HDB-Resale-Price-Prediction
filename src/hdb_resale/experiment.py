@@ -37,18 +37,29 @@ def train_experiment(
     *,
     seed: int = 42,
     threads: int = 4,
+    epochs: int = 20,
+    device: str = "auto",
 ) -> dict:
     """Fit on training rows and report validation only; never overwrite a run."""
     if threads < 1:
         raise ValueError("threads must be positive")
     splits = split_data(load_data(data_path))
-    model = build_model(model_name, seed)
+    model = build_model(model_name, seed, epochs=epochs, device=device, threads=threads)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=False)
     train, validation = splits["train"], splits["validation"]
     started = time.perf_counter()
     with threadpool_limits(limits=threads):
-        model.fit(train.drop(columns=TARGET), train[TARGET])
+        if model_name in {"mlp", "lstm"}:
+            x_train = model[:-1].fit_transform(train.drop(columns=TARGET))
+            x_validation = model[:-1].transform(validation.drop(columns=TARGET))
+            model.named_steps["model"].fit(
+                x_train,
+                train[TARGET].to_numpy(),
+                validation_data=(x_validation, validation[TARGET].to_numpy()),
+            )
+        else:
+            model.fit(train.drop(columns=TARGET), train[TARGET])
         fit_seconds = time.perf_counter() - started
         predicted = np.asarray(model.predict(validation.drop(columns=TARGET)))
     metadata = {
@@ -78,6 +89,19 @@ def train_experiment(
         "validation": regression_metrics(validation[TARGET], predicted),
     }
     bundle = {"model": model, "metadata": metadata}
+    if model_name in {"mlp", "lstm"}:
+        import torch
+
+        estimator = model.named_steps["model"]
+        metadata["dependencies"]["torch"] = torch.__version__
+        metadata["training"] = {
+            "epochs_completed": len(estimator.history_),
+            "best_epoch": estimator.best_epoch_,
+            "device": estimator.device_used_,
+        }
+        pd.DataFrame(estimator.history_).to_csv(output / "history.csv", index=False)
+        torch.save(estimator.weights_, output / "weights.pt")
+        estimator.weights_ = None
     joblib.dump(bundle, output / "model.joblib")
     write_json(output / "metadata.json", metadata)
     subgroup_metrics(validation, predicted).to_csv(
@@ -94,6 +118,15 @@ def load_bundle(path: str | Path) -> dict:
         raise ValueError("Unsupported model bundle format")
     if bundle["metadata"]["features"] != FEATURES:
         raise ValueError("Model feature contract does not match this package")
+    if bundle["metadata"]["model"] in {"mlp", "lstm"}:
+        import torch
+
+        directory = path if path.is_dir() else path.parent
+        bundle["model"].named_steps["model"].weights_ = torch.load(
+            directory / "weights.pt",
+            map_location="cpu",
+            weights_only=True,
+        )
     return bundle
 
 

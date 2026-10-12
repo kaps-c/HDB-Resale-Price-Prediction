@@ -16,12 +16,60 @@ from sklearn.preprocessing import (
 from hdb_resale.data import CATEGORICAL, NUMERIC, make_features
 
 
-def build_model(name: str, seed: int = 42) -> Pipeline:
+def build_model(
+    name: str,
+    seed: int = 42,
+    *,
+    epochs: int = 20,
+    device: str = "auto",
+    threads: int = 4,
+) -> Pipeline:
     """Construct an unfitted model with the same raw-input contract."""
     features = FunctionTransformer(make_features)
     if name == "median":
         return Pipeline(
             [("features", features), ("model", DummyRegressor(strategy="median"))]
+        )
+    if name in {"mlp", "lstm"}:
+        from hdb_resale.neural import NeuralRegressor
+
+        categorical = (
+            OneHotEncoder(handle_unknown="ignore", max_categories=256)
+            if name == "mlp"
+            else Pipeline(
+                [
+                    (
+                        "ordinal",
+                        OrdinalEncoder(
+                            handle_unknown="use_encoded_value",
+                            unknown_value=-1,
+                        ),
+                    ),
+                    ("scale", StandardScaler()),
+                ]
+            )
+        )
+        preprocessor = ColumnTransformer(
+            [
+                ("numeric", StandardScaler(), NUMERIC),
+                ("categorical", categorical, CATEGORICAL),
+            ]
+        )
+        return Pipeline(
+            [
+                ("features", features),
+                ("preprocessor", preprocessor),
+                (
+                    "model",
+                    NeuralRegressor(
+                        architecture=name,
+                        seed=seed,
+                        epochs=epochs,
+                        device=device,
+                        threads=threads,
+                    ),
+                ),
+            ]
         )
     if name == "trees":
         preprocessor = ColumnTransformer(

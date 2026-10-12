@@ -1,6 +1,7 @@
 """Execute notebook smoke tests with fresh kernels and temporary outputs."""
 
 import argparse
+import importlib.util
 import os
 import tempfile
 from pathlib import Path
@@ -20,6 +21,14 @@ def main() -> None:
         os.environ["HDB_RUN_ROOT"] = str(root / "artifacts") if args.full else temporary
         for path in sorted((root / "notebooks").glob("*.ipynb")):
             notebook = nbformat.read(path, as_version=4)
+            if (
+                notebook.metadata.get("optional_neural")
+                and importlib.util.find_spec("torch") is None
+            ):
+                print(
+                    f"SKIP {path.name}: optional PyTorch is not installed", flush=True
+                )
+                continue
             NotebookClient(
                 notebook,
                 timeout=600 if args.full else 180,

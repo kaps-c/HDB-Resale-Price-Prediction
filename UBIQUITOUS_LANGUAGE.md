@@ -13,3 +13,8 @@
 | MAE | Mean absolute prediction error, reported in SGD. |
 | RMSE | Root mean squared prediction error in SGD; gives large errors more weight. |
 | Feature-sequence LSTM | The original idea of treating feature columns as sequential inputs; not a time-series forecast. |
+| Ridge | Linear regression with an L2 penalty that limits coefficient size. |
+| Boosted trees | An additive sequence of decision trees correcting earlier prediction errors. |
+| MLP | Multilayer perceptron: a feed-forward neural network for tabular inputs here. |
+| Epoch | One pass through the training transactions. |
+| R-squared | Error relative to predicting the evaluation-set mean; can be negative. |

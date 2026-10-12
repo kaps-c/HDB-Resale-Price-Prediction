@@ -1,6 +1,7 @@
 """Export compact measured results and a figure without model binaries."""
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 
@@ -20,13 +21,15 @@ def main() -> None:
     if table["model"].duplicated().any():
         raise ValueError("Export one selected run per model")
     for run in args.runs:
-        destination = args.output / run.name
+        metadata = json.loads((run / "metadata.json").read_text(encoding="utf-8"))
+        destination = args.output / metadata["model"]
         destination.mkdir(parents=True, exist_ok=True)
         for filename in [
             "metadata.json",
             "test.json",
             "validation_groups.csv",
             "test_groups.csv",
+            "history.csv",
         ]:
             source = run / filename
             if source.exists():

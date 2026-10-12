@@ -15,12 +15,18 @@ January–March 2025. Configurations are fixed before test evaluation.
 | Median | 183,802 | 204,700 | 267,294 | -0.833 |
 | Ridge | 54,325 | 64,631 | 85,068 | 0.814 |
 | Boosted trees | 36,909 | 60,779 | 73,295 | 0.862 |
+| MLP | 27,130 | 32,090 | 44,860 | 0.948 |
+| Feature-sequence LSTM (5 epochs) | 85,409 | 98,478 | 124,076 | 0.605 |
 
 Ridge reduces test MAE by about 68% relative to the constant baseline. Its larger
 test error than validation error is a reminder that later transactions can differ
 from the training period. These are historical results, not current valuations.
-Boosted trees have the lowest validation MAE of these fixed configurations, but
-their advantage over Ridge narrows on the later test period.
+The MLP has the lowest validation MAE among these completed fixed experiments.
+Its test MAE is about 84% lower than the median baseline. This is one historical
+split and one seed, not evidence that it will always outperform the alternatives.
+The LSTM is retained as a documented weaker experiment: roughly 14 minutes of
+fitting versus 115 seconds for the MLP on this CPU run. Unequal epoch budgets
+prevent conclusions about the best achievable performance of either model family.
 
 ![Model comparison](reports/figures/comparison.png)
 
@@ -29,8 +35,10 @@ their advantage over Ridge narrows on the later test period.
 1. [Data exploration](notebooks/01_exploration.ipynb): snapshot, features, and split decisions.
 2. [Baselines](notebooks/02_baselines.ipynb): median, Ridge, evaluation, and prediction.
 3. [Boosted trees](notebooks/03_boosted_trees.ipynb): nonlinear tabular modelling.
-4. [Comparison](notebooks/06_comparison.ipynb): performance and limitations.
-5. [Design](docs/design.md): architecture, original defects, and delivery contract.
+4. [MLP](notebooks/04_mlp.ipynb): optional neural tabular modelling.
+5. [LSTM comparison](notebooks/05_lstm.ipynb): the original feature-sequence idea.
+6. [Comparison](notebooks/06_comparison.ipynb): performance and limitations.
+7. [Design](docs/design.md): architecture, original defects, and delivery contract.
 
 ```text
 src/hdb_resale/   validation, features, models, experiments, plots, CLI
@@ -73,6 +81,26 @@ python scripts/export_reports.py artifacts/median artifacts/ridge artifacts/tree
 python scripts/check_notebooks.py --full
 ```
 
+Optional neural experiments (install the separate CPU dependency lock first):
+
+```powershell
+python -m pip install -r requirements-neural.txt
+python -m hdb_resale train --data data/raw/resale.csv --model mlp --output artifacts/mlp --epochs 20 --threads 2 --device cpu
+python -m hdb_resale train --data data/raw/resale.csv --model lstm --output artifacts/lstm --epochs 5 --threads 2 --device cpu
+python -m hdb_resale evaluate --data data/raw/resale.csv --bundle artifacts/mlp
+python -m hdb_resale evaluate --data data/raw/resale.csv --bundle artifacts/lstm
+python scripts/export_reports.py artifacts/median artifacts/ridge artifacts/trees artifacts/mlp artifacts/lstm
+python scripts/check_notebooks.py --full
+```
+
+The two neural training commands can run in separate terminals concurrently:
+each uses two CPU threads and an independent output directory. Run at most two
+experiments concurrently and only one on CUDA. A compatible CUDA PyTorch build
+can use `--device cuda`; CUDA was not tested in this case study. The locked
+environment uses CPU PyTorch. Runtime comparisons depend on hardware and contention.
+The default notebook smoke check skips optional neural notebooks when PyTorch is
+absent; CI additionally checks them in a separate CPU neural job.
+
 On Linux/macOS, activate with `source .venv/bin/activate`. Use a new output
 directory when retraining: existing runs are never overwritten. The example
 input contains synthetic flats to demonstrate the interface, not benchmark rows.
@@ -94,6 +122,13 @@ a newer download and claim the same results. See [data notes](data/README.md).
 - Trees: 200 boosting iterations, 31 leaves, learning rate 0.1, L2 penalty 1;
   native categories with training-fitted rare-category grouping. Internal random
   validation is disabled; this fixed configuration was not tuned on the test set.
+- MLP: 128/64 hidden units, ReLU, dropout 0.1, Adam at 0.001, batch size 1024.
+  Maximum 20 epochs and patience 5; selected epoch 9, stopped after epoch 14.
+- LSTM: four layers, 64 hidden units, dropout 0.2, five-epoch budget. Ten feature
+  positions act as timesteps; this is not transaction-history forecasting. Unlike
+  the MLP, it retains ordinal categorical inputs to test the original compact
+  architecture. Both neural models standardise targets using training prices and
+  select checkpoints by validation MAE. Weights are separate CPU-portable files.
 - Preprocessing is fitted only on training rows. Unknown categories are supported;
   malformed required fields raise errors instead of fabricated defaults.
 - Identical recorded rows remain: no transaction identifier establishes duplication.
@@ -110,11 +145,12 @@ python -m pytest -q
 python scripts/check_notebooks.py
 ```
 
-CI runs checks and synthetic notebook execution on Windows and Linux. Full-data
-training is local. See [contributing](CONTRIBUTING.md) for test-first development,
+CI is configured for checks and synthetic notebook execution on Windows and Linux;
+optional neural checks run on Linux. Local verification used Windows CPU.
+Full-data training is local. See [contributing](CONTRIBUTING.md) for test-first development,
 PEP 8 conventions, and Conventional Commits.
 
-## Limitations and next experiments
+## Limitations
 
 - March 2025 may be incomplete. The snapshot's original retrieval date is unknown.
 - The original project already examined 2025: this is a corrected historical
@@ -122,8 +158,9 @@ PEP 8 conventions, and Conventional Commits.
 - Transaction mix and market conditions change. No claim of causal effects,
   future market forecasting, or present-day valuation accuracy is made.
 - No coordinates, nearby amenities, or external economic features are included.
-- Optional MLP and feature-sequence LSTM comparisons come
-  after the baseline release; their original scores are not reused.
+- Neural experiments have unequal compute budgets and use one seed. The LSTM's
+  short run cannot establish its best achievable performance. The original
+  notebooks' scores are not reused.
 
 The original Colab notebooks are preserved in Git history. Their preprocessing
 leakage, inconsistent inference, and training-loss checkpoint selection are
