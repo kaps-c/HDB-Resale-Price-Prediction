@@ -14,10 +14,13 @@ January–March 2025. Configurations are fixed before test evaluation.
 | --- | ---: | ---: | ---: | ---: |
 | Median | 183,802 | 204,700 | 267,294 | -0.833 |
 | Ridge | 54,325 | 64,631 | 85,068 | 0.814 |
+| Boosted trees | 36,909 | 60,779 | 73,295 | 0.862 |
 
 Ridge reduces test MAE by about 68% relative to the constant baseline. Its larger
 test error than validation error is a reminder that later transactions can differ
 from the training period. These are historical results, not current valuations.
+Boosted trees have the lowest validation MAE of these fixed configurations, but
+their advantage over Ridge narrows on the later test period.
 
 ![Model comparison](reports/figures/comparison.png)
 
@@ -25,7 +28,9 @@ from the training period. These are historical results, not current valuations.
 
 1. [Data exploration](notebooks/01_exploration.ipynb): snapshot, features, and split decisions.
 2. [Baselines](notebooks/02_baselines.ipynb): median, Ridge, evaluation, and prediction.
-3. [Design](docs/design.md): architecture, original defects, and delivery contract.
+3. [Boosted trees](notebooks/03_boosted_trees.ipynb): nonlinear tabular modelling.
+4. [Comparison](notebooks/06_comparison.ipynb): performance and limitations.
+5. [Design](docs/design.md): architecture, original defects, and delivery contract.
 
 ```text
 src/hdb_resale/   validation, features, models, experiments, plots, CLI
@@ -59,6 +64,15 @@ python -m hdb_resale compare artifacts/median artifacts/ridge
 python -m hdb_resale predict --bundle artifacts/ridge --input examples/flats.csv --output artifacts/predictions.csv
 ```
 
+Add the boosted-tree experiment and refresh the comparison:
+
+```powershell
+python -m hdb_resale train --data data/raw/resale.csv --model trees --output artifacts/trees
+python -m hdb_resale evaluate --data data/raw/resale.csv --bundle artifacts/trees
+python scripts/export_reports.py artifacts/median artifacts/ridge artifacts/trees
+python scripts/check_notebooks.py --full
+```
+
 On Linux/macOS, activate with `source .venv/bin/activate`. Use a new output
 directory when retraining: existing runs are never overwritten. The example
 input contains synthetic flats to demonstrate the interface, not benchmark rows.
@@ -77,6 +91,9 @@ a newer download and claim the same results. See [data notes](data/README.md).
   in months, and lower/upper storey bounds.
 - Categorical: town, flat type, street, and flat model. Block is excluded initially.
 - Ridge: scaled numeric inputs, one-hot categories, `alpha=1`, `solver="lsqr"`.
+- Trees: 200 boosting iterations, 31 leaves, learning rate 0.1, L2 penalty 1;
+  native categories with training-fitted rare-category grouping. Internal random
+  validation is disabled; this fixed configuration was not tuned on the test set.
 - Preprocessing is fitted only on training rows. Unknown categories are supported;
   malformed required fields raise errors instead of fabricated defaults.
 - Identical recorded rows remain: no transaction identifier establishes duplication.
@@ -105,7 +122,7 @@ PEP 8 conventions, and Conventional Commits.
 - Transaction mix and market conditions change. No claim of causal effects,
   future market forecasting, or present-day valuation accuracy is made.
 - No coordinates, nearby amenities, or external economic features are included.
-- Boosted trees are next. Optional MLP and feature-sequence LSTM comparisons come
+- Optional MLP and feature-sequence LSTM comparisons come
   after the baseline release; their original scores are not reused.
 
 The original Colab notebooks are preserved in Git history. Their preprocessing

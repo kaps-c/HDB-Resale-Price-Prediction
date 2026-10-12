@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
         "train", help="Train and validate without touching test labels"
     )
     train.add_argument("--data", type=Path, required=True)
-    train.add_argument("--model", choices=["median", "ridge"], required=True)
+    train.add_argument("--model", choices=["median", "ridge", "trees"], required=True)
     train.add_argument("--output", type=Path, required=True, help="New run directory")
     train.add_argument("--seed", type=int, default=42)
     train.add_argument("--threads", type=int, default=4)
