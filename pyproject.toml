@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hdb-resale"
+version = "0.1.0"
+description = "Reproducible HDB resale price experiments with chronological evaluation"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0,<3",
+    "pandas>=2.2,<4",
+    "scikit-learn>=1.6,<2",
+    "matplotlib>=3.9,<4",
+    "joblib>=1.4,<2",
+    "threadpoolctl>=3.5,<4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.11", "nbformat>=5", "nbclient>=0.10", "ipykernel>=6", "build>=1", "pre-commit>=4"]
+neural = ["torch>=2.6,<3"]
+
+[project.scripts]
+hdb-resale = "hdb_resale.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.ipynb" = ["E402"]

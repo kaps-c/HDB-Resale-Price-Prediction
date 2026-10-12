@@ -1,0 +1,11 @@
+{
+  "sha256": "fb23b8460f1a762e4220382e91f3bfcf6030bb69286b1a5577646c33d7a608d1",
+  "rows": 202399,
+  "month_min": "2017-01",
+  "month_max": "2025-03",
+  "exact_repeated_rows": 298,
+  "source": "User-supplied historical snapshot; original retrieval date unavailable",
+  "original_commit": "e45aff1",
+  "canonical_path": "data/raw/resale.csv",
+  "march_2025_complete": null
+}
