@@ -18,3 +18,6 @@
 | MLP | Multilayer perceptron: a feed-forward neural network for tabular inputs here. |
 | Epoch | One pass through the training transactions. |
 | R-squared | Error relative to predicting the evaluation-set mean; can be negative. |
+| Residual | Predicted minus actual price in SGD; negative means underprediction. |
+| Checkpoint | Neural weights selected at the epoch with lowest validation MAE. |
+| Leakage | Information from later evaluation rows influencing fitted preprocessing or training. |

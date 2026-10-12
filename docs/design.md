@@ -13,9 +13,10 @@ model bundle -> predictions and evaluation. CLI commands and notebooks call the
 same package. No notebook imports, Colab mounts, implicit working-directory data
 paths inside library functions, or shared checkpoint filenames.
 
-The first complete slice is median/Ridge training, persistence, prediction, and
-evaluation. Boosted trees follow. Optional neural models follow only after a usable
-baseline portfolio exists. Each slice includes behavioural tests and documentation.
+Median, Ridge, boosted trees, and optional MLP/LSTM experiments share this flow.
+Each has behavioural tests and an executed explanatory notebook. Model-specific
+choices feed one shared pipeline constructor; no separate orchestration framework
+is needed.
 
 ## Evaluation contract
 

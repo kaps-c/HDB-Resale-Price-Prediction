@@ -25,6 +25,11 @@ def main() -> None:
                 notebook.metadata.get("optional_neural")
                 and importlib.util.find_spec("torch") is None
             ):
+                if args.full:
+                    raise RuntimeError(
+                        "Full publication requires PyTorch: "
+                        "install requirements-neural.txt"
+                    )
                 print(
                     f"SKIP {path.name}: optional PyTorch is not installed", flush=True
                 )
@@ -35,6 +40,10 @@ def main() -> None:
                 kernel_name="python3",
                 resources={"metadata": {"path": str(root)}},
             ).execute()
+            for cell in notebook.cells:
+                if cell.cell_type == "code" and cell.source.strip():
+                    if cell.execution_count is None or not cell.outputs:
+                        raise ValueError(f"{path.name}: code cell has no saved output")
             if args.full:
                 nbformat.write(notebook, path)
             print(f"PASS {path.name}", flush=True)

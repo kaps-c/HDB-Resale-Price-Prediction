@@ -30,6 +30,7 @@ def build_model(
         return Pipeline(
             [("features", features), ("model", DummyRegressor(strategy="median"))]
         )
+    numeric = StandardScaler()
     if name in {"mlp", "lstm"}:
         from hdb_resale.neural import NeuralRegressor
 
@@ -49,74 +50,44 @@ def build_model(
                 ]
             )
         )
-        preprocessor = ColumnTransformer(
-            [
-                ("numeric", StandardScaler(), NUMERIC),
-                ("categorical", categorical, CATEGORICAL),
-            ]
+        estimator = NeuralRegressor(
+            architecture=name,
+            seed=seed,
+            epochs=epochs,
+            device=device,
+            threads=threads,
         )
-        return Pipeline(
-            [
-                ("features", features),
-                ("preprocessor", preprocessor),
-                (
-                    "model",
-                    NeuralRegressor(
-                        architecture=name,
-                        seed=seed,
-                        epochs=epochs,
-                        device=device,
-                        threads=threads,
-                    ),
-                ),
-            ]
+    elif name == "trees":
+        numeric = "passthrough"
+        categorical = OrdinalEncoder(
+            handle_unknown="use_encoded_value",
+            unknown_value=np.nan,
+            max_categories=254,
         )
-    if name == "trees":
-        preprocessor = ColumnTransformer(
-            [
-                ("numeric", "passthrough", NUMERIC),
-                (
-                    "categorical",
-                    OrdinalEncoder(
-                        handle_unknown="use_encoded_value",
-                        unknown_value=np.nan,
-                        max_categories=254,
-                    ),
-                    CATEGORICAL,
-                ),
-            ]
+        estimator = HistGradientBoostingRegressor(
+            max_iter=200,
+            learning_rate=0.1,
+            max_leaf_nodes=31,
+            l2_regularization=1.0,
+            early_stopping=False,
+            random_state=seed,
+            categorical_features=[False] * len(NUMERIC) + [True] * len(CATEGORICAL),
         )
-        return Pipeline(
-            [
-                ("features", features),
-                ("preprocessor", preprocessor),
-                (
-                    "model",
-                    HistGradientBoostingRegressor(
-                        max_iter=200,
-                        learning_rate=0.1,
-                        max_leaf_nodes=31,
-                        l2_regularization=1.0,
-                        early_stopping=False,
-                        random_state=seed,
-                        categorical_features=[False] * len(NUMERIC)
-                        + [True] * len(CATEGORICAL),
-                    ),
-                ),
-            ]
-        )
-    if name != "ridge":
+    elif name == "ridge":
+        categorical = OneHotEncoder(handle_unknown="ignore")
+        estimator = Ridge(alpha=1.0, solver="lsqr", random_state=seed)
+    else:
         raise ValueError(f"Unknown model: {name}")
     preprocessor = ColumnTransformer(
         [
-            ("numeric", StandardScaler(), NUMERIC),
-            ("categorical", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL),
+            ("numeric", numeric, NUMERIC),
+            ("categorical", categorical, CATEGORICAL),
         ]
     )
     return Pipeline(
         [
             ("features", features),
             ("preprocessor", preprocessor),
-            ("model", Ridge(alpha=1.0, solver="lsqr", random_state=seed)),
+            ("model", estimator),
         ]
     )

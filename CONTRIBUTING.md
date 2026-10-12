@@ -19,6 +19,10 @@ PEP 8 naming and imports apply, with an explicit 88-character line-length except
 Keep imports and optional dependencies out of unrelated execution paths. Do not
 commit datasets, model binaries, logs, or secrets. Notebook outputs should be
 compact, useful, and reproducible; omit verbose training logs.
+Before publishing notebook changes, run `python scripts/check_notebooks.py --full`
+with the frozen snapshot and optional neural dependencies installed. Commit the
+executed outputs, including data analysis and evaluation figures. The runner
+rejects empty output cells; synthetic smoke runs do not replace published results.
 
 Use Conventional Commits: `feat(scope): ...`, `fix(scope): ...`, `test(scope): ...`,
 `refactor(scope): ...`, `docs(scope): ...`, or `chore(scope): ...`.
